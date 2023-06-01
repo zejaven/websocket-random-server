@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  webapp:
+    image: websocket-random-server
+    ports:
+      - "8080:8080"
+
+networks:
+  default:
