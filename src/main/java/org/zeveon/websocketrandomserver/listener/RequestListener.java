@@ -13,6 +13,11 @@ import static org.zeveon.websocketrandomserver.util.StringUtil.REMOTE_ADDRESS;
 @WebListener
 public class RequestListener implements ServletRequestListener {
 
+    /**
+     * Modifies http session by putting there remote address property
+     *
+     * @param event servlet request event
+     */
     @Override
     public void requestInitialized(ServletRequestEvent event) {
         var request = (HttpServletRequest) event.getServletRequest();

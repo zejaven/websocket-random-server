@@ -34,16 +34,33 @@ public class RandomServerEndpoint {
     private static final Gson GSON = new Gson();
     private static final int NUM_BITS = 130;
 
+    /**
+     * Gets IP address from session
+     * Checks if there is already exists session from the same IP address
+     * Closes session in case of IP address already exists
+     * Creates a set for unique numbers related to session
+     *
+     * @param session current session
+     */
     @OnOpen
     public void onOpen(Session session) {
         var ipAddress = getIpAddress(session);
-        if (isSameIp(session, ipAddress)) {
+        if (isSameIp(session.getOpenSessions(), ipAddress)) {
             closeSession(session, ALREADY_CONNECTED_CLOSE_REASON);
             return;
         }
         SESSION_NUMBERS_MAP.put(session, new HashSet<>());
     }
 
+    /**
+     * Generates random number which is unique relatively existing session numbers
+     * Adds generated number to existing session numbers
+     * Returns JSON result represented by generated number
+     *
+     * @param session current session
+     * @param message message from client
+     * @return generated random number
+     */
     @OnMessage
     public String onMessage(Session session, String message) {
         var existingNumbers = SESSION_NUMBERS_MAP.get(session);
@@ -52,28 +69,58 @@ public class RandomServerEndpoint {
         return GSON.toJson(new RandomResponse(generatedNumber.toString()));
     }
 
+    /**
+     * Removes numbers of closed session from map
+     *
+     * @param session closed session
+     */
     @OnClose
     public void onClose(Session session) {
         SESSION_NUMBERS_MAP.remove(session);
     }
 
+    /**
+     * Displays error message
+     *
+     * @param session session where error happened
+     * @param throwable error
+     */
     @OnError
     public void onError(Session session, Throwable throwable) {
         log.error("Something went wrong in session %s, session is closed".formatted(session.getId()), throwable);
     }
 
+    /**
+     * Gets current IP address from session properties
+     *
+     * @param session current session
+     * @return current IP address
+     */
     private String getIpAddress(Session session) {
         return ofNullable(session.getUserProperties().get(REMOTE_ADDRESS))
                 .map(Object::toString)
                 .orElseThrow(() -> new RuntimeException("Remote address not found"));
     }
 
-    private boolean isSameIp(Session session, String ipAddress) {
-        return session.getOpenSessions().stream()
+    /**
+     * Checks if any opened session contains current session IP address
+     *
+     * @param sessions  other sessions
+     * @param ipAddress current IP address
+     * @return true or false - is IP exists
+     */
+    private boolean isSameIp(Set<Session> sessions, String ipAddress) {
+        return sessions.stream()
                 .filter(Session::isOpen)
                 .anyMatch(other -> ipAddress.equals(getIpAddress(other)));
     }
 
+    /**
+     * Closes the session with corresponding reason
+     *
+     * @param session     session to close
+     * @param closeReason close reason
+     */
     @SuppressWarnings("SameParameterValue")
     private void closeSession(Session session, CloseReason closeReason) {
         try {
@@ -83,11 +130,17 @@ public class RandomServerEndpoint {
         }
     }
 
-    private BigInteger generateRandomNumber(Set<BigInteger> bigIntegers) {
+    /**
+     * Generates random number which is unique relatively input numbers
+     *
+     * @param numbers input numbers
+     * @return unique number
+     */
+    private BigInteger generateRandomNumber(Set<BigInteger> numbers) {
         BigInteger value;
         do {
             value = new BigInteger(NUM_BITS, RANDOM);
-        } while (bigIntegers.contains(value));
+        } while (numbers.contains(value));
         return value;
     }
 }
