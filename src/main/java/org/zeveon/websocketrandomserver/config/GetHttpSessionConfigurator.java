@@ -5,6 +5,7 @@ import jakarta.websocket.HandshakeResponse;
 import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpointConfig;
 
+import static java.util.Optional.ofNullable;
 import static org.zeveon.websocketrandomserver.util.StringUtil.REMOTE_ADDRESS;
 
 /**
@@ -21,7 +22,10 @@ public class GetHttpSessionConfigurator extends ServerEndpointConfig.Configurato
      */
     @Override
     public void modifyHandshake(ServerEndpointConfig config, HandshakeRequest request, HandshakeResponse response) {
-        var httpSession = (HttpSession) request.getHttpSession();
-        config.getUserProperties().put(REMOTE_ADDRESS, httpSession.getAttribute(REMOTE_ADDRESS));
+        ofNullable(request.getHttpSession())
+                .filter(e -> e instanceof HttpSession)
+                .map(e -> (HttpSession) e)
+                .ifPresent(httpSession ->
+                        config.getUserProperties().put(REMOTE_ADDRESS, httpSession.getAttribute(REMOTE_ADDRESS)));
     }
 }

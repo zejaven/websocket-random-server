@@ -5,6 +5,7 @@ import jakarta.servlet.ServletRequestListener;
 import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.http.HttpServletRequest;
 
+import static java.util.Optional.ofNullable;
 import static org.zeveon.websocketrandomserver.util.StringUtil.REMOTE_ADDRESS;
 
 /**
@@ -20,8 +21,11 @@ public class RequestListener implements ServletRequestListener {
      */
     @Override
     public void requestInitialized(ServletRequestEvent event) {
-        var request = (HttpServletRequest) event.getServletRequest();
-        var httpSession = request.getSession();
-        httpSession.setAttribute(REMOTE_ADDRESS, request.getRemoteAddr());
+        ofNullable(event.getServletRequest())
+                .filter(servletRequest -> servletRequest instanceof HttpServletRequest)
+                .map(servletRequest -> (HttpServletRequest) servletRequest)
+                .ifPresent(httpServletRequest -> ofNullable(httpServletRequest.getSession())
+                        .ifPresent(httpSession ->
+                                httpSession.setAttribute(REMOTE_ADDRESS, httpServletRequest.getRemoteAddr())));
     }
 }
